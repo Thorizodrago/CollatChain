@@ -3,12 +3,32 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Lock, Shield, TrendingUp, ArrowRight, DollarSign, RefreshCw, Link } from 'lucide-react';
 import { isConnected, isAllowed, requestAccess, getAddress, getNetwork } from "@stellar/freighter-api";
 import { Horizon } from '@stellar/stellar-sdk';
+import { ApiError } from 'next/dist/server/api-utils';
+import { error } from 'console';
+
 interface WalletData {
   address: string;
   network: string;
   balance: number;
 }
+
+// API response tiplerini tanımla
+interface CoinGeckoResponse {
+  stellar: {
+    usd: number;
+  };
+}
+
+interface CryptoCompareResponse {
+  USD: number;
+}
+
+interface BinanceResponse {
+  price: string;
+}
+
 const stellarSdkServer = new Horizon.Server("https://horizon-testnet.stellar.org");
+
 export default function CollatChainApp() {
   // State'ler
   const [walletData, setWalletData] = useState<WalletData | null>(null);
@@ -19,42 +39,89 @@ export default function CollatChainApp() {
   const [priceError, setPriceError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  let priceFound = false;
 
-  // Binance API'den XLM fiyatını çek (Public API - Key gerektirmez)
+  // Cryptocurrency fiyatını çek (Multiple API fallback)
   const fetchXlmPrice = async () => {
     try {
       setPriceLoading(true);
       setPriceError(null);
 
-      const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XLMUSDT', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      // API'leri sırayla dene
+      const apiEndpoints = [
+        // CoinGecko API (CORS friendly)
+        {
+          url: 'https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=usd',
+          parser: (data: CoinGeckoResponse) => data.stellar.usd,
+          name: 'CoinGecko'
+        },
+        // CryptoCompare API (CORS friendly)
+        {
+          url: 'https://min-api.cryptocompare.com/data/price?fsym=XLM&tsyms=USD',
+          parser: (data: CryptoCompareResponse) => data.USD,
+          name: 'CryptoCompare'
+        },
+        // Binance API (backup)
+        {
+          url: 'https://api.binance.com/api/v3/ticker/price?symbol=XLMUSDT',
+          parser: (data: BinanceResponse) => parseFloat(data.price),
+          name: 'Binance'
         }
-      });
+      ];
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+
+      for (const api of apiEndpoints) {
+        try {
+          console.log(`Trying API: ${api.name} - ${api.url}`);
+
+          const response = await fetch(api.url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            // CORS için timeout ekle
+            signal: AbortSignal.timeout(5000)
+          });
+
+          console.log(`${api.name} response status: ${response.status}`);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log(`${api.name} data:`, data);
+
+          const price = api.parser(data);
+
+          if (isNaN(price) || price <= 0) {
+            throw new Error('Invalid price data received');
+          }
+
+          setXlmPrice(price);
+          setLastUpdated(new Date().toLocaleTimeString('tr-TR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }));
+          setPriceLoading(false);
+          priceFound = true;
+          console.log(`✅ Price fetched successfully from ${api.name}: $${price}`);
+          break;
+
+        } catch (apiError) {
+          console.warn(`❌ ${api.name} API failed:`, apiError,);
+          continue;
+        }
       }
 
-      const data = await response.json();
-      const price = parseFloat(data.price);
-
-      if (isNaN(price)) {
-        throw new Error('Invalid price data received');
+      if (!priceFound) {
+        setPriceLoading(true);
       }
-
-      setXlmPrice(price);
-      setLastUpdated(new Date().toLocaleTimeString('tr-TR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      }));
-      setPriceLoading(false);
 
     } catch (err) {
       console.error('XLM price fetch error:', err);
-      setPriceError('Live price unavailable');
+      setPriceError('Try refresh the page.');
       setXlmPrice(0.12); // Fallback değer
       setLastUpdated('Using fallback price');
       setPriceLoading(false);
@@ -66,7 +133,7 @@ export default function CollatChainApp() {
     fetchXlmPrice();
 
     // Her 30 saniyede bir fiyatı güncelle (daha sık güncellenme)
-    const interval = setInterval(fetchXlmPrice, 30 * 1000);
+    const interval = setInterval(fetchXlmPrice, 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -74,7 +141,7 @@ export default function CollatChainApp() {
   useEffect(() => {
     if (stakeAmount && !isNaN(parseFloat(stakeAmount)) && parseFloat(stakeAmount) > 0) {
       const xlmValue = parseFloat(stakeAmount) * xlmPrice;
-      setEstimatedStablecoin(xlmValue * 0.75); // %75 collateral oranı (daha konservatif)
+      setEstimatedStablecoin(xlmValue * 0.70); // %70 collateral oranı (daha konservatif)
     } else {
       setEstimatedStablecoin(0);
     }
@@ -226,8 +293,8 @@ export default function CollatChainApp() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center mb-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                  <p className="text-gray-300 text-sm font-medium">XLM/USDT</p>
+                  <div className={`w-2 h-2 rounded-full mr-2 animate-pulse ${priceError ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
+                  <p className="text-gray-300 text-sm font-medium">XLM/USD</p>
                 </div>
                 {priceLoading ? (
                   <div className="animate-pulse h-8 w-28 bg-gray-700/50 rounded-lg"></div>
@@ -259,7 +326,7 @@ export default function CollatChainApp() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-300 text-sm font-medium mb-2">Loan-to-Value</p>
-                <p className="text-3xl font-bold text-white mb-1">75%</p>
+                <p className="text-3xl font-bold text-white mb-1">70%</p>
                 <p className="text-gray-400 text-xs">Safe collateral ratio</p>
               </div>
               <div className="p-3 rounded-xl bg-blue-600/20 border border-blue-500/30">
@@ -372,7 +439,7 @@ export default function CollatChainApp() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-300">Loan-to-Value (75%):</span>
+                        <span className="text-gray-300">Loan-to-Value (70%):</span>
                         <span className="text-white font-semibold">
                           ${estimatedStablecoin.toFixed(2)}
                         </span>
@@ -434,7 +501,7 @@ export default function CollatChainApp() {
                 <span className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-4">2</span>
                 <div>
                   <p className="text-white font-medium">Receive USDC Instantly</p>
-                  <p className="text-gray-400 text-sm">Get up to 75% of your collateral value in USDC</p>
+                  <p className="text-gray-400 text-sm">Get up to 70% of your collateral value in USDC</p>
                 </div>
               </div>
               <div className="flex items-start">
