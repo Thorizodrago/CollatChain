@@ -13,7 +13,7 @@ interface WalletData {
   balance: number;
 }
 
-// API response tiplerini tanımla
+// Define API response types
 interface CoinGeckoResponse {
   stellar: {
     usd: number;
@@ -33,7 +33,7 @@ const stellarSdkServer = new Horizon.Server("https://horizon-testnet.stellar.org
 export default function CollatChainApp() {
   const vaultManager = useVaultManager();
 
-  // State'ler
+  // States
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [stakeAmount, setStakeAmount] = useState<string>('');
   const [estimatedStablecoin, setEstimatedStablecoin] = useState<number>(0);
@@ -44,13 +44,13 @@ export default function CollatChainApp() {
   const [lastUpdated, setLastUpdated] = useState<string>('');
   let priceFound = false;
 
-  // Cryptocurrency fiyatını çek (Multiple API fallback)
+  // Fetch cryptocurrency price (Multiple API fallback)
   const fetchXlmPrice = async () => {
     try {
       setPriceLoading(true);
       setPriceError(null);
 
-      // API'leri sırayla dene
+      // Try APIs in order
       const apiEndpoints = [
         // CoinGecko API (CORS friendly)
         {
@@ -72,7 +72,6 @@ export default function CollatChainApp() {
         }
       ];
 
-
       for (const api of apiEndpoints) {
         try {
           console.log(`Trying API: ${api.name} - ${api.url}`);
@@ -82,7 +81,7 @@ export default function CollatChainApp() {
             headers: {
               'Content-Type': 'application/json',
             },
-            // CORS için timeout ekle
+            // Add timeout for CORS
             signal: AbortSignal.timeout(5000)
           });
 
@@ -102,7 +101,7 @@ export default function CollatChainApp() {
           }
 
           setXlmPrice(price);
-          setLastUpdated(new Date().toLocaleTimeString('tr-TR', {
+          setLastUpdated(new Date().toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit'
@@ -124,8 +123,8 @@ export default function CollatChainApp() {
 
     } catch (err) {
       console.error('XLM price fetch error:', err);
-      setPriceError('Try refresh the page.');
-      setXlmPrice(0.12); // Fallback değer
+      setPriceError('Try refreshing the page.');
+      setXlmPrice(0.12); // Fallback value
       setLastUpdated('Using fallback price');
       setPriceLoading(false);
     }
@@ -140,30 +139,30 @@ export default function CollatChainApp() {
     });
   }
 
-  // Fiyat ve hesaplamaları güncelle
+  // Update price and calculations
   useEffect(() => {
     fetchXlmPrice();
 
-    // Her 30 saniyede bir fiyatı güncelle (daha sık güncellenme)
+    // Update price every 60 seconds
     const interval = setInterval(fetchXlmPrice, 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Tahmini stablecoin miktarını hesapla
+  // Calculate estimated stablecoin amount
   useEffect(() => {
     if (stakeAmount && !isNaN(parseFloat(stakeAmount)) && parseFloat(stakeAmount) > 0) {
       const xlmValue = parseFloat(stakeAmount) * xlmPrice;
-      setEstimatedStablecoin(xlmValue * 0.70); // %70 collateral oranı (daha konservatif)
+      setEstimatedStablecoin(xlmValue * 0.70); // 70% collateral ratio (more conservative)
     } else {
       setEstimatedStablecoin(0);
     }
   }, [stakeAmount, xlmPrice]);
 
-  // Freighter Wallet bağlantısı
+  // Freighter Wallet connection
   const handleConnectWallet = async () => {
     setIsLoading(true);
     try {
-      // Freighter yüklü mü kontrol et
+      // Check if Freighter is installed
       await connect();
       const publicKey = await getPublicKey();
       if (!publicKey) {
@@ -172,7 +171,7 @@ export default function CollatChainApp() {
 
       console.log("Freighter connected:", publicKey);
 
-      // Cüzdan bilgilerini state'e kaydet
+      // Save wallet information to state
       setWalletData({
         address: publicKey,
         network: "Testnet",
@@ -188,7 +187,7 @@ export default function CollatChainApp() {
     }
   };
 
-  // Stake işlemi (simüle edilmiş)
+  // Stake transaction (simulated)
   const handleStake = async () => {
     if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
       alert('Please enter a valid amount');
@@ -207,7 +206,7 @@ export default function CollatChainApp() {
         throw new Error("Freighter wallet not detected. Please install Freighter extension.");
       }
 
-      // Stake işlemi
+      // Stake transaction
       vaultManager.options.publicKey = publicKey;
       const tx = await vaultManager.deposit_collateral({
         user: walletData.address,
@@ -217,12 +216,6 @@ export default function CollatChainApp() {
 
       alert(`Successfully staked ${stakeAmount} XLM!\nYou will receive ${estimatedStablecoin.toFixed(2)} USDC in your wallet.`);
       setStakeAmount('');
-
-      // // Bakiyeyi güncelle (demo için)
-      // setWalletData(prev => prev ? {
-      //   ...prev,
-      //   balance: prev.balance - parseFloat(stakeAmount)
-      // } : null);
 
       await refreshBalance();
 
@@ -234,7 +227,7 @@ export default function CollatChainApp() {
     }
   };
 
-  // Adres kısaltma
+  // Address shortening
   const formatAddress = (address: string): string => {
     return address.length > 10
       ? `${address.slice(0, 8)}...${address.slice(-6)}`
@@ -243,7 +236,7 @@ export default function CollatChainApp() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Gelişmiş Arkaplan Efektleri */}
+      {/* Advanced Background Effects */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Diagonal gradient lines */}
         <div className="absolute inset-0 opacity-30">
@@ -275,18 +268,18 @@ export default function CollatChainApp() {
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-8 max-w-5xl">
-        {/* Başlık */}
+        {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-6">
             <div className="relative">
-              <Link className="w-10 h-10 text-purple-400 mr-3" />
+              <Link className="w-10 h-12 text-purple-400 mr-3" />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-400 via-blue-800 to-purple-400 bg-clip-text text-transparent">
               CollatChain
             </h1>
           </div>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-4">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
             Decentralized XLM Collateral Platform
           </p>
           <p className="text-gray-400 max-w-xl mx-auto">
@@ -294,9 +287,9 @@ export default function CollatChainApp() {
           </p>
         </div>
 
-        {/* İstatistik Kartları */}
+        {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* XLM Fiyat Kartı */}
+          {/* XLM Price Card */}
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-purple-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
@@ -329,7 +322,7 @@ export default function CollatChainApp() {
             </div>
           </div>
 
-          {/* Collateral Ratio Kartı */}
+          {/* Collateral Ratio Card */}
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-blue-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
@@ -343,7 +336,7 @@ export default function CollatChainApp() {
             </div>
           </div>
 
-          {/* Total Locked Kartı */}
+          {/* Total Locked Card */}
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-indigo-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
@@ -358,7 +351,7 @@ export default function CollatChainApp() {
           </div>
         </div>
 
-        {/* Ana Kart */}
+        {/* Main Card */}
         <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
           {!walletData ? (
             <div className="text-center">
@@ -389,7 +382,7 @@ export default function CollatChainApp() {
             </div>
           ) : (
             <div>
-              {/* Cüzdan Bilgileri */}
+              {/* Wallet Information */}
               <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl p-6 mb-8 border border-purple-500/20">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div className="mb-4 sm:mb-0">
@@ -405,14 +398,14 @@ export default function CollatChainApp() {
                   <div className="text-right">
                     <p className="text-gray-300 text-sm font-medium mb-1">Available Balance</p>
                     <p className="text-white font-bold text-2xl">
-                      {walletData.balance.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+                      {walletData.balance.toLocaleString('en-US', { maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-gray-400 text-sm">XLM</p>
                   </div>
                 </div>
               </div>
 
-              {/* Stake Formu */}
+              {/* Stake Form */}
               <div className="space-y-8">
                 <div>
                   <label className="block text-white font-semibold mb-3 text-lg">
@@ -435,7 +428,7 @@ export default function CollatChainApp() {
                   </div>
                 </div>
 
-                {/* Hesaplama Gösterimi */}
+                {/* Calculation Display */}
                 {stakeAmount && parseFloat(stakeAmount) > 0 && (
                   <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-2xl p-6 border border-green-500/20">
                     <h3 className="text-white font-semibold mb-4 text-lg">Loan Details</h3>
@@ -464,7 +457,7 @@ export default function CollatChainApp() {
                   </div>
                 )}
 
-                {/* Stake Butonu */}
+                {/* Stake Button */}
                 <button
                   onClick={handleStake}
                   disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0}
@@ -488,7 +481,7 @@ export default function CollatChainApp() {
           )}
         </div>
 
-        {/* Bilgi Bölümü */}
+        {/* Information Section */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
             <div className="flex items-center mb-6">
