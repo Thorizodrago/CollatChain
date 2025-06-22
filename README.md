@@ -100,5 +100,17 @@ soroban build
 ![Uygulama Ana Ekran Görüntüsü](firstshot.png)
 ![Uygulama Ana Ekran Görüntüsü](secondshot.png)
 
+<hr>
+
+# 🔗 Resources
+
+   🌐 Stellar Developer Docs
+
+   🔧 Soroban Documentation
+
+   💼 Freighter Wallet
+
+<hr>
+
 
 ##### Built with ❤️, ☕, and 🤖 by Efe Yılmaz as Thorizodrago and Ömer Balaban as Balabanom for Stellar Hack Pera Hackathon 2025
