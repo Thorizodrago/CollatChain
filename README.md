@@ -94,7 +94,11 @@ soroban build
    
    
    <hr>
-# 📸 UI Snaphot
    
+# 📸 UI Snaphot
+
+![Uygulama Ana Ekran Görüntüsü](firstshot.png)
+![Uygulama Ana Ekran Görüntüsü](secondshot.png)
+
 
 ##### Built with ❤️, ☕, and 🤖 by Efe Yılmaz as Thorizodrago and Ömer Balaban as Balabanom for Stellar Hack Pera Hackathon 2025
