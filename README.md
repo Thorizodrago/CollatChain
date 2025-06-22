@@ -1,11 +1,15 @@
 # CollatChain
 
-**CollatChain** is a decentralized overcollateralized lending platform built on the **Stellar blockchain**. It allows users to stake their XLM tokens without selling them, and receive CBIT — a synthetic stable-value asset — in return. This system preserves user exposure to XLM while unlocking liquidity, powered by Soroban smart contracts and integrated wallet interactions.
+**CollatChain** is a decentralized overcollateralized lending platform built on the **Stellar blockchain (Testnet)**. It allows users to stake their XLM tokens without selling them, and receive CBIT, a synthetic stable-value asset in return. This system preserves user exposure to XLM while unlocking liquidity, powered by Soroban smart contracts and integrated wallet interactions.
 
 ## 🚀 Purpose
 
-The core mission of CollatChain is to empower crypto holders with access to liquidity **without forcing them to sell their assets**. By locking collateral (XLM), users can mint and utilize CBIT tokens — enabling lending, trading, or payments — while maintaining ownership of their long-term holdings.
+The core mission of **CollatChain** is to empower crypto holders with access to liquidity **without forcing them to sell their assets**. By locking collateral (XLM), users can mint and utilize CBIT tokens, enabling lending, trading, or payments while maintaining ownership of their long-term holdings.
 
+## 🤝 Team
+
+- Efe Yılmaz
+- Ömer Balaban 
 ---
 
 # 🏗️ Core Technologies
@@ -14,10 +18,10 @@ The core mission of CollatChain is to empower crypto holders with access to liqu
 <code>Next.js + React + Tailwind CSS</code>
 
 #### Wallet Integration:  
-<code>@stellar/freighter-api</code>
+<code>@/stellar-wallets-kit</code>
 
 #### Smart Contracts:  
-<code>Rust (Soroban SDK)</code>
+<code>Rust + Stellar + Soroban SDK</code>
 
 ---
 
@@ -36,19 +40,19 @@ The core mission of CollatChain is to empower crypto holders with access to liqu
 
 # 🔑 How to Connect Your Wallet
 
-#### 1. Install the Freighter Wallet Extension  
+#### 1. Install one of Stellar Wallets (Freighter reccomended)  
 #### 2. Open the app  
-#### 3. Click on “Connect Freighter Wallet”  
-#### 4. Approve the connection request in the Freighter extension
+#### 3. Click on “Connect Wallet”  
+#### 4. Approve the connection request in the wallet extension
 
 ---
 
 Once connected, you’ll see:
 
 - ✅ Your Stellar wallet address (shortened)  
-- ✅ Connected network (Testnet/Futurenet)  
+- ✅ Connected network (Testnet)  
 - ✅ Available XLM balance  
-- ✅ Vault position and mintable CBIT  
+- ✅ Approximate USDC value
 
 ---
 
@@ -58,4 +62,39 @@ Once connected, you’ll see:
 ```bash
 cd app
 npm install
+```
+### 🚀 Run Next.js frontend
+```bash
+cd /your/directory/frontend
+```
 
+### 🛠️ Build & deploy Soroban contracts (optional)
+
+```bash
+cd contract
+soroban build
+```
+<hr>
+
+# 📌 Roadmap / Future Work
+
+   ✅ Vault creation and staking flow
+
+   ✅ Dashboard (last transactions)
+   
+   ✅ Different tokenization contracts
+
+   🔒 CBIT as Stable Coin
+
+   🌍 Deployment on Futurenet
+
+   📊 Dynamic liquidation ratios (phase 2)
+
+   🤖 Machine learning for collateral risk analysis
+   
+   
+   <hr>
+# 📸 UI Snaphot
+   
+
+##### Built with ❤️, ☕, and 🤖 by Efe Yılmaz as Thorizodrago and Ömer Balaban as Balabanom for Stellar Hack Pera Hackathon 2025
