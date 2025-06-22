@@ -5,7 +5,6 @@ use crate::{VaultManager, VaultManagerClient};
 #[test]
 fn test_simple() {
     let env = Env::default();
-    let user = Address::generate(&env);
     let contract_id = env.register_contract(None, VaultManager);
     let _client = VaultManagerClient::new(&env, &contract_id);
     // smoke test – should compile and deploy

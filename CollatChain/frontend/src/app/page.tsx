@@ -1,10 +1,11 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { Wallet, Lock, Shield, TrendingUp, ArrowRight, DollarSign, RefreshCw, Link } from 'lucide-react';
-import { isConnected, isAllowed, requestAccess, getAddress, getNetwork } from "@stellar/freighter-api";
 import { Horizon } from '@stellar/stellar-sdk';
 import { ApiError } from 'next/dist/server/api-utils';
 import { error } from 'console';
+import { connect, getPublicKey } from '@/stellar-wallets-kit';
+import { useVaultManager } from '@/hooks/useVaultManager';
 
 interface WalletData {
   address: string;
@@ -30,6 +31,8 @@ interface BinanceResponse {
 const stellarSdkServer = new Horizon.Server("https://horizon-testnet.stellar.org");
 
 export default function CollatChainApp() {
+  const vaultManager = useVaultManager();
+
   // State'ler
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [stakeAmount, setStakeAmount] = useState<string>('');
@@ -128,6 +131,15 @@ export default function CollatChainApp() {
     }
   };
 
+  const refreshBalance = async () => {
+    const publicKey = await getPublicKey();
+    if (!publicKey) return;
+    setWalletData({
+      ...walletData!,
+      balance: parseFloat((await stellarSdkServer.accounts().accountId(publicKey).call()).balances[0].balance)
+    });
+  }
+
   // Fiyat ve hesaplamaları güncelle
   useEffect(() => {
     fetchXlmPrice();
@@ -152,35 +164,19 @@ export default function CollatChainApp() {
     setIsLoading(true);
     try {
       // Freighter yüklü mü kontrol et
-      const { isConnected: freighterConnected } = await isConnected();
-      if (!freighterConnected) {
+      await connect();
+      const publicKey = await getPublicKey();
+      if (!publicKey) {
         throw new Error("Freighter wallet not detected. Please install Freighter extension.");
       }
 
-      // Freighter izin verdi mi kontrol et
-      const { isAllowed: freighterAllowed } = await isAllowed();
-      if (!freighterAllowed) {
-        const accessRes = await requestAccess();
-        if (accessRes.error) {
-          throw new Error(accessRes.error);
-        }
-      }
-
-      // Cüzdan adresi ve ağ bilgilerini al
-      const addressRes = await getAddress();
-      const networkRes = await getNetwork();
-
-      if (!addressRes?.address || !networkRes?.network) {
-        throw new Error("Cannot get wallet information from Freighter");
-      }
-
-      console.log("Freighter connected:", addressRes.address, networkRes.network);
+      console.log("Freighter connected:", publicKey);
 
       // Cüzdan bilgilerini state'e kaydet
       setWalletData({
-        address: addressRes.address,
-        network: networkRes.network,
-        balance: parseFloat((await stellarSdkServer.accounts().accountId(addressRes.address).call()).balances[0].balance)
+        address: publicKey,
+        network: "Testnet",
+        balance: parseFloat((await stellarSdkServer.accounts().accountId(publicKey).call()).balances[0].balance)
       });
 
     } catch (err) {
@@ -206,17 +202,29 @@ export default function CollatChainApp() {
 
     setIsLoading(true);
     try {
-      // Simüle edilmiş stake işlemi
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      const publicKey = await getPublicKey();
+      if (!publicKey) {
+        throw new Error("Freighter wallet not detected. Please install Freighter extension.");
+      }
+
+      // Stake işlemi
+      vaultManager.options.publicKey = publicKey;
+      const tx = await vaultManager.deposit_collateral({
+        user: walletData.address,
+        amount: BigInt(stakeAmount)
+      });
+      await tx.signAndSend();
 
       alert(`Successfully staked ${stakeAmount} XLM!\nYou will receive ${estimatedStablecoin.toFixed(2)} USDC in your wallet.`);
       setStakeAmount('');
 
-      // Bakiyeyi güncelle (demo için)
-      setWalletData(prev => prev ? {
-        ...prev,
-        balance: prev.balance - parseFloat(stakeAmount)
-      } : null);
+      // // Bakiyeyi güncelle (demo için)
+      // setWalletData(prev => prev ? {
+      //   ...prev,
+      //   balance: prev.balance - parseFloat(stakeAmount)
+      // } : null);
+
+      await refreshBalance();
 
     } catch (err) {
       console.error('Staking error:', err);
